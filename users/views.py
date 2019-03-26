@@ -2,6 +2,24 @@ from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from .forms import UserRegisterForm, UserUpdateForm, ProfileUpdateForm
+from django.core.files.storage import FileSystemStorage
+from django.views.decorators.csrf import csrf_exempt, csrf_protect
+from django.core.files.uploadhandler import TemporaryFileUploadHandler
+
+
+@csrf_exempt
+def upload(request):
+    request.upload_handlers.insert(0, TemporaryFileUploadHandler(request))
+    return _upload(request)
+
+
+@csrf_protect
+def _upload(request):
+    if request.method == "POST":
+        upload_file = request.FILES['document']
+        fs = FileSystemStorage()
+        fs.save(upload_file.name, upload_file)
+    return render(request, 'users/upload.html')
 
 
 def register(request):
@@ -9,7 +27,8 @@ def register(request):
         form = UserRegisterForm(request.POST)
         if form.is_valid():
             form.save()
-            messages.success(request, f'Your account has been created! You are now able to log in')
+            messages.success(
+                request, f'Your account has been created! You are now able to log in')
             return redirect('login')
     else:
         form = UserRegisterForm()
